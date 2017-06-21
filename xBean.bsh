@@ -1,0 +1,50 @@
+public class xBean implements Runnable {
+	public void run() {
+		double THRESHOLD = 4095;//the pixel value when camera is blackout
+		int INTERVAL = 300;
+		int EXHIBITTIME=500;
+		java.lang.String needReset=null;
+		gui.enableLiveMode(true);
+                iw = gui.getSnapLiveWin();
+		while (gui.isLiveModeOn() && !Thread.interrupted()) {
+			try {
+				gui.sleep(INTERVAL);
+				stat = iw.getImagePlus().getStatistics();
+				if (needReset==null&&(stat.mean == THRESHOLD)&&(stat.stdDev==0.0)) {
+					int count=1;
+					while (count!=0){//waitfor turret to be in position;
+						gui.sleep(INTERVAL);
+                                                stat = iw.getImagePlus().getStatistics();
+						if ((stat.mean != THRESHOLD)||(stat.stdDev!=0.0)){
+							count=3;
+						}else{
+							count--;
+						}
+					}
+					ij.gui.ImageWindow.setNextLocation(0,0);
+					gui.enableLiveMode(false);
+					needReset= gui.runAcquisition();
+					iw.close();
+					gui.sleep(EXHIBITTIME);
+					gui.enableLiveMode(true);
+					iw = gui.getSnapLiveWin();
+				}else if(needReset!=null&&(stat.mean!=THRESHOLD)&&(stat.stdDev!=0.0)){
+                                        gui.closeAcquisitionWindow(needReset);
+					gui.closeAcquisition(needReset);
+					needReset=null;
+				}
+			} catch (InterruptedException ex) {
+				break;
+			}
+		}
+	}
+
+};
+
+if (gui.isLiveModeOn()) {
+	gui.enableLiveMode(false);
+	gui.getSnapLiveWin().close();
+	}else {
+	Thread xBeanThread = new Thread(new xBean());
+	xBeanThread.start();
+}
